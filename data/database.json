@@ -625,7 +625,7 @@
     "passwordSalt": "kp2_tan_hung_secure_salt_2025",
     "failedAttempts": 0,
     "lockedUntil": 0,
-    "lastLogin": "2026-11-06T15:35:24.258Z"
+    "lastLogin": "2026-11-06T15:50:12.535Z"
   },
   "auditLogs": [
     {
@@ -680,6 +680,51 @@
       "timestamp": "2026-11-06T15:35:53.946Z",
       "status": "success",
       "ipAddress": "127.0.0.1"
+    },
+    {
+      "id": "log-1793980190476-9dtr",
+      "action": "Tạo bản sao lưu",
+      "details": "Đã tạo bản snapshot tự động: snapshot-2026-11-06T15-49-50-475Z-khoi-tao-baseline.json (Lý do: khoi-tao-baseline)",
+      "operator": "kp2.tanhung.hcm",
+      "timestamp": "2026-11-06T15:49:50.476Z",
+      "status": "success",
+      "ipAddress": ""
+    },
+    {
+      "id": "log-1793980197640-ekfy",
+      "action": "Đăng nhập thành công",
+      "details": "Quản trị viên đăng nhập hệ thống Khu phố 02",
+      "operator": "kp2.tanhung.hcm",
+      "timestamp": "2026-11-06T15:49:57.640Z",
+      "status": "success",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "id": "log-1793980205336-uvmi",
+      "action": "Đăng nhập thành công",
+      "details": "Quản trị viên đăng nhập hệ thống Khu phố 02",
+      "operator": "kp2.tanhung.hcm",
+      "timestamp": "2026-11-06T15:50:05.336Z",
+      "status": "success",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "id": "log-1793980205349-aj57",
+      "action": "Tạo bản sao lưu",
+      "details": "Đã tạo bản snapshot tự động: snapshot-2026-11-06T15-50-05-348Z-Kiem_thu_he_thong_tu_dong.json (Lý do: Kiem thu he thong tu dong)",
+      "operator": "kp2.tanhung.hcm",
+      "timestamp": "2026-11-06T15:50:05.349Z",
+      "status": "success",
+      "ipAddress": ""
+    },
+    {
+      "id": "log-1793980212556-u9rl",
+      "action": "Phục hồi dữ liệu",
+      "details": "Đã phục hồi thành công từ bản sao lưu: snapshot-2026-11-06T15-50-05-359Z-truoc-khi-dong-bo-may-chu.json",
+      "operator": "kp2.tanhung.hcm",
+      "timestamp": "2026-11-06T15:50:12.557Z",
+      "status": "success",
+      "ipAddress": ""
     }
   ]
 }

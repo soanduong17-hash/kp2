@@ -19,12 +19,38 @@ import {
 } from '../src/types';
 import { hashAdminPassword, isDocumentExpired } from '../src/utils/rules';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+const IS_VERCEL = Boolean(process.env.VERCEL);
+const DATA_DIR = IS_VERCEL ? '/tmp/kp2-data' : path.resolve(process.cwd(), 'data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
 const BACKUP_DIR = path.join(DATA_DIR, 'backups');
-const UPLOAD_DIR = path.resolve(process.cwd(), 'public', 'uploads');
-const PUBLIC_DATA_DIR = path.resolve(process.cwd(), 'public', 'data');
+const UPLOAD_DIR = IS_VERCEL ? '/tmp/kp2-uploads' : path.resolve(process.cwd(), 'public', 'uploads');
+const PUBLIC_DATA_DIR = IS_VERCEL ? '/tmp/kp2-public-data' : path.resolve(process.cwd(), 'public', 'data');
 const PUBLIC_DB_FILE = path.join(PUBLIC_DATA_DIR, 'database.json');
+
+const BUNDLED_DB_FILE = path.resolve(process.cwd(), 'data', 'database.json');
+const BUNDLED_PUBLIC_DB_FILE = path.resolve(process.cwd(), 'public', 'data', 'database.json');
+
+export interface BackupSnapshotMeta {
+  filename: string;
+  filepath: string;
+  timestamp: string;
+  reason: string;
+  sizeBytes: number;
+  sizeFormatted: string;
+  isValid: boolean;
+  itemCounts: {
+    committeeMembers: number;
+    officialDocuments: number;
+    activities: number;
+    digitalUtilities: number;
+    organizations: number;
+    announcements: number;
+    residentDocuments: number;
+    incidentReports: number;
+    programRegistrations: number;
+    communityQuestions: number;
+  };
+}
 
 const ADMIN_SALT = 'kp2_tan_hung_secure_salt_2025';
 // Tài khoản: kp2.tanhung.hcm | Mật khẩu: Kp2#TanHung
@@ -414,6 +440,27 @@ class DatabaseManager {
     this.ensureDirs();
     this.db = this.loadDatabase();
     this.cleanupExpiredDocuments();
+    this.initAutomatedBackups();
+  }
+
+  private initAutomatedBackups() {
+    try {
+      const existing = this.listSnapshots();
+      if (existing.length === 0) {
+        this.createSnapshotBackup('khoi-tao-baseline');
+      }
+      // Tự động sao lưu định kỳ mỗi 12 giờ
+      const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+      setInterval(() => {
+        try {
+          this.createSnapshotBackup('dinh-ky-tu-dong-12h');
+        } catch (err) {
+          console.error('Lỗi sao lưu định kỳ:', err);
+        }
+      }, TWELVE_HOURS_MS).unref();
+    } catch (e) {
+      console.warn('Lỗi khởi tạo sao lưu định kỳ:', e);
+    }
   }
 
   private ensureDirs() {
@@ -433,8 +480,16 @@ class DatabaseManager {
 
   private loadDatabase(): AppDatabase {
     try {
+      let content = '';
       if (fs.existsSync(DB_FILE)) {
-        const content = fs.readFileSync(DB_FILE, 'utf-8');
+        content = fs.readFileSync(DB_FILE, 'utf-8');
+      } else if (fs.existsSync(BUNDLED_DB_FILE)) {
+        content = fs.readFileSync(BUNDLED_DB_FILE, 'utf-8');
+      } else if (fs.existsSync(BUNDLED_PUBLIC_DB_FILE)) {
+        content = fs.readFileSync(BUNDLED_PUBLIC_DB_FILE, 'utf-8');
+      }
+
+      if (content) {
         const parsed = JSON.parse(content);
         
         // Chỉ lưu logo do người quản trị tải lên; các logo mặc định /icons/apps/ không tự động gán
@@ -468,7 +523,6 @@ class DatabaseManager {
           adminConfig: {
             ...initialDatabase.adminConfig,
             ...(parsed.adminConfig || {}),
-            // Luôn đảm bảo tài khoản kp2.tanhung.hcm được cài đặt chuẩn xác
             username: 'kp2.tanhung.hcm',
             passwordHash: parsed.adminConfig?.passwordHash || ADMIN_HASH,
             passwordSalt: parsed.adminConfig?.passwordSalt || ADMIN_SALT,
@@ -505,6 +559,10 @@ class DatabaseManager {
   // Đồng bộ toàn bộ dữ liệu từ phía Quản trị viên lên máy chủ
   public syncDatabase(data: Partial<AppDatabase>): boolean {
     if (!data || !data.communityInfo) return false;
+    // Tự động tạo bản sao lưu snapshot dự phòng trước khi cập nhật dữ liệu máy chủ
+    try {
+      this.createSnapshotBackup('truoc-khi-dong-bo-may-chu');
+    } catch {}
     this.db = {
       ...this.db,
       communityInfo: {
@@ -1146,7 +1204,7 @@ class DatabaseManager {
     return this.db.residentDocuments;
   }
 
-  // Backup & Restore
+  // Backup & Restore Engine
   public createBackup(): { success: boolean; data: AppDatabase; filename: string } {
     const filename = `backup-kp2-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     const filepath = path.join(BACKUP_DIR, filename);
@@ -1155,22 +1213,226 @@ class DatabaseManager {
     return { success: true, data: this.db, filename };
   }
 
+  // Tạo Snapshot Backup tự động có gắn metadata, kiểm tra toàn vẹn
+  public createSnapshotBackup(reason: string = 'thu-cong'): BackupSnapshotMeta | null {
+    try {
+      this.ensureDirs();
+      const timestamp = new Date().toISOString();
+      const safeTime = timestamp.replace(/[:.]/g, '-');
+      const safeReason = reason.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 40);
+      const filename = `snapshot-${safeTime}-${safeReason}.json`;
+      const filepath = path.join(BACKUP_DIR, filename);
+
+      const itemCounts = {
+        committeeMembers: Array.isArray(this.db.committeeMembers) ? this.db.committeeMembers.length : 0,
+        officialDocuments: Array.isArray(this.db.officialDocuments) ? this.db.officialDocuments.length : 0,
+        activities: Array.isArray(this.db.activities) ? this.db.activities.length : 0,
+        digitalUtilities: Array.isArray(this.db.digitalUtilities) ? this.db.digitalUtilities.length : 0,
+        organizations: Array.isArray(this.db.organizations) ? this.db.organizations.length : 0,
+        announcements: Array.isArray(this.db.announcements) ? this.db.announcements.length : 0,
+        residentDocuments: Array.isArray(this.db.residentDocuments) ? this.db.residentDocuments.length : 0,
+        incidentReports: Array.isArray(this.db.incidentReports) ? this.db.incidentReports.length : 0,
+        programRegistrations: Array.isArray(this.db.programRegistrations) ? this.db.programRegistrations.length : 0,
+        communityQuestions: Array.isArray(this.db.communityQuestions) ? this.db.communityQuestions.length : 0,
+      };
+
+      const payload = {
+        meta: {
+          snapshotVersion: '1.0',
+          createdAt: timestamp,
+          reason,
+          itemCounts,
+        },
+        database: this.db,
+      };
+
+      const jsonStr = JSON.stringify(payload, null, 2);
+      fs.writeFileSync(filepath, jsonStr, 'utf-8');
+
+      const sizeBytes = Buffer.byteLength(jsonStr, 'utf-8');
+      const sizeFormatted = sizeBytes > 1024 * 1024
+        ? `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`
+        : `${Math.round(sizeBytes / 1024)} KB`;
+
+      this.logAudit('Tạo bản sao lưu', `Đã tạo bản snapshot tự động: ${filename} (Lý do: ${reason})`);
+
+      // Quản lý lưu trữ an toàn: Giữ tối đa 50 bản sao lưu mới nhất, không xóa khi chưa hợp lệ
+      this.pruneOldSnapshots();
+
+      return {
+        filename,
+        filepath,
+        timestamp,
+        reason,
+        sizeBytes,
+        sizeFormatted,
+        isValid: true,
+        itemCounts,
+      };
+    } catch (err) {
+      console.error('Lỗi tạo bản sao lưu snapshot:', err);
+      return null;
+    }
+  }
+
+  private pruneOldSnapshots(): void {
+    try {
+      if (!fs.existsSync(BACKUP_DIR)) return;
+      const files = fs.readdirSync(BACKUP_DIR)
+        .filter(f => f.startsWith('snapshot-') && f.endsWith('.json'))
+        .map(f => ({
+          filename: f,
+          path: path.join(BACKUP_DIR, f),
+          mtime: fs.statSync(path.join(BACKUP_DIR, f)).mtimeMs,
+        }))
+        .sort((a, b) => b.mtime - a.mtime);
+
+      if (files.length > 50) {
+        const toDelete = files.slice(50);
+        for (const file of toDelete) {
+          try {
+            fs.unlinkSync(file.path);
+          } catch {}
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi dọn dẹp snapshots cũ:', e);
+    }
+  }
+
+  public listSnapshots(): BackupSnapshotMeta[] {
+    try {
+      this.ensureDirs();
+      if (!fs.existsSync(BACKUP_DIR)) return [];
+      const files = fs.readdirSync(BACKUP_DIR)
+        .filter(f => f.endsWith('.json'))
+        .sort()
+        .reverse();
+
+      const list: BackupSnapshotMeta[] = [];
+      for (const filename of files) {
+        try {
+          const filepath = path.join(BACKUP_DIR, filename);
+          const stat = fs.statSync(filepath);
+          const content = fs.readFileSync(filepath, 'utf-8');
+          const parsed = JSON.parse(content);
+
+          let dbData: AppDatabase | null = null;
+          let reason = 'Định kỳ hệ thống';
+          let timestamp = new Date(stat.mtimeMs).toISOString();
+
+          if (parsed && parsed.meta && parsed.database) {
+            dbData = parsed.database;
+            reason = parsed.meta.reason || reason;
+            timestamp = parsed.meta.createdAt || timestamp;
+          } else if (parsed && parsed.communityInfo) {
+            dbData = parsed;
+            reason = 'Xuất thủ công JSON';
+          }
+
+          if (dbData) {
+            const sizeBytes = stat.size;
+            const sizeFormatted = sizeBytes > 1024 * 1024
+              ? `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`
+              : `${Math.round(sizeBytes / 1024)} KB`;
+
+            list.push({
+              filename,
+              filepath,
+              timestamp,
+              reason,
+              sizeBytes,
+              sizeFormatted,
+              isValid: Boolean(dbData.communityInfo && dbData.demographics),
+              itemCounts: {
+                committeeMembers: Array.isArray(dbData.committeeMembers) ? dbData.committeeMembers.length : 0,
+                officialDocuments: Array.isArray(dbData.officialDocuments) ? dbData.officialDocuments.length : 0,
+                activities: Array.isArray(dbData.activities) ? dbData.activities.length : 0,
+                digitalUtilities: Array.isArray(dbData.digitalUtilities) ? dbData.digitalUtilities.length : 0,
+                organizations: Array.isArray(dbData.organizations) ? dbData.organizations.length : 0,
+                announcements: Array.isArray(dbData.announcements) ? dbData.announcements.length : 0,
+                residentDocuments: Array.isArray(dbData.residentDocuments) ? dbData.residentDocuments.length : 0,
+                incidentReports: Array.isArray(dbData.incidentReports) ? dbData.incidentReports.length : 0,
+                programRegistrations: Array.isArray(dbData.programRegistrations) ? dbData.programRegistrations.length : 0,
+                communityQuestions: Array.isArray(dbData.communityQuestions) ? dbData.communityQuestions.length : 0,
+              },
+            });
+          }
+        } catch {}
+      }
+
+      return list;
+    } catch (err) {
+      console.error('Lỗi liệt kê danh sách sao lưu:', err);
+      return [];
+    }
+  }
+
+  public restoreSnapshotFile(filename: string): { success: boolean; message: string } {
+    try {
+      const safeFilename = path.basename(filename);
+      const targetPath = path.join(BACKUP_DIR, safeFilename);
+
+      if (!fs.existsSync(targetPath)) {
+        return { success: false, message: `Không tìm thấy tệp bản sao lưu ${safeFilename}` };
+      }
+
+      const content = fs.readFileSync(targetPath, 'utf-8');
+      const parsed = JSON.parse(content);
+      const incomingDb: AppDatabase = (parsed.database && parsed.meta) ? parsed.database : parsed;
+
+      if (!incomingDb || !incomingDb.communityInfo || !incomingDb.demographics) {
+        return { success: false, message: 'Tệp bản sao lưu bị hỏng hoặc không đúng định dạng chuẩn Khu phố 02' };
+      }
+
+      // Tạo bản snapshot an toàn của dữ liệu HIỆN TẠI trước khi phục hồi
+      this.createSnapshotBackup('truoc-khi-phuc-hoi-he-thong');
+
+      const currentAdmin = this.db.adminConfig;
+      this.db = {
+        ...incomingDb,
+        adminConfig: currentAdmin,
+      };
+
+      const saved = this.saveDatabase();
+      if (!saved) {
+        return { success: false, message: 'Lỗi ghi đĩa khi phục hồi cơ sở dữ liệu' };
+      }
+
+      this.logAudit('Phục hồi dữ liệu', `Đã phục hồi thành công từ bản sao lưu: ${safeFilename}`);
+      return { success: true, message: `Đã khôi phục thành công toàn bộ hệ thống từ bản sao lưu ${safeFilename}` };
+    } catch (err: any) {
+      console.error('Lỗi phục hồi tệp sao lưu:', err);
+      return { success: false, message: err.message || 'Lỗi xử lý tệp sao lưu' };
+    }
+  }
+
+  public getSnapshotFilePath(filename: string): string | null {
+    const safeFilename = path.basename(filename);
+    const targetPath = path.join(BACKUP_DIR, safeFilename);
+    return fs.existsSync(targetPath) ? targetPath : null;
+  }
+
   public restoreBackup(data: Partial<AppDatabase>): { success: boolean; message: string } {
     if (!data.communityInfo || !data.demographics) {
       return { success: false, message: 'Dữ liệu sao lưu không đúng định dạng chuẩn của Khu phố 02' };
     }
+    // Tạo bản snapshot an toàn trước khi phục hồi
+    this.createSnapshotBackup('truoc-khi-nap-json');
+
     this.db = {
       ...this.db,
       ...data,
       adminConfig: this.db.adminConfig, // preserve admin auth credentials
     };
     this.saveDatabase();
-    this.logAudit('Phục hồi dữ liệu', 'Phục hồi toàn bộ cơ sở dữ liệu từ bản sao lưu thành công');
+    this.logAudit('Phục hồi dữ liệu', 'Phục hồi toàn bộ cơ sở dữ liệu từ bản sao lưu JSON thành công');
     return { success: true, message: 'Phục hồi dữ liệu thành công' };
   }
 
   // Reset entire database to clean slate (no demo data)
   public resetToCleanSlate() {
+    this.createSnapshotBackup('truoc-khi-khoi-tao-lai');
     this.db = {
       ...initialDatabase,
       adminConfig: {
@@ -1189,3 +1451,4 @@ class DatabaseManager {
 }
 
 export const dbManager = new DatabaseManager();
+

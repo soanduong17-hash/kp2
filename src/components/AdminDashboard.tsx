@@ -38,6 +38,10 @@ import {
   Presentation,
   Play,
   FolderOpen,
+  Server,
+  ShieldCheck,
+  History,
+  HardDrive,
 } from 'lucide-react';
 import { DocumentUploader, UtilityResourceForm } from './DocumentUploader';
 import {
@@ -69,6 +73,10 @@ import {
   getLocalDatabase,
   saveLocalDatabase,
   syncDatabaseToServer,
+  fetchBackupsListApi,
+  createBackupSnapshotApi,
+  restoreBackupFileApi,
+  BackupSnapshotItem,
 } from '../services/api';
 import {
   CommitteeMember,
@@ -356,6 +364,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   // 6. Password Change Form State
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '' });
+
+  // 6b. Snapshot Backups State
+  const [snapshots, setSnapshots] = useState<BackupSnapshotItem[]>([]);
+  const [loadingSnapshots, setLoadingSnapshots] = useState(false);
+  const [creatingSnapshot, setCreatingSnapshot] = useState(false);
+  const [snapshotReason, setSnapshotReason] = useState('');
+  const [restoringFilename, setRestoringFilename] = useState<string | null>(null);
+
+  const loadSnapshots = async () => {
+    setLoadingSnapshots(true);
+    try {
+      const list = await fetchBackupsListApi();
+      setSnapshots(list);
+    } catch {}
+    finally {
+      setLoadingSnapshots(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (activeTab === 'backup') {
+      loadSnapshots();
+    }
+  }, [activeTab]);
+
+  const handleCreateSnapshot = async () => {
+    setCreatingSnapshot(true);
+    try {
+      const res = await createBackupSnapshotApi(snapshotReason.trim() || 'Sao lưu thủ công từ Quản trị viên');
+      showNotification('✅ ' + res.message);
+      setSnapshotReason('');
+      await loadSnapshots();
+    } catch (err: any) {
+      showNotification('Lỗi tạo snapshot: ' + (err.message || 'Thất bại'), true);
+    } finally {
+      setCreatingSnapshot(false);
+    }
+  };
+
+  const handleRestoreSnapshot = async (filename: string) => {
+    if (!window.confirm(`Xác nhận phục hồi toàn bộ hệ thống từ bản sao lưu:\n${filename}?\n\nHệ thống sẽ tự động tạo một bản sao lưu dự phòng an toàn trước khi nạp lại dữ liệu.`)) {
+      return;
+    }
+    setRestoringFilename(filename);
+    try {
+      const res = await restoreBackupFileApi(filename);
+      showNotification('✅ ' + res.message);
+      onRefresh();
+      await loadSnapshots();
+    } catch (err: any) {
+      showNotification('Lỗi phục hồi bản sao lưu: ' + (err.message || 'Thất bại'), true);
+    } finally {
+      setRestoringFilename(null);
+    }
+  };
+
 
   // 7. Incident Response Modal
   const [selectedIncident, setSelectedIncident] = useState<IncidentReport | null>(null);
@@ -3828,21 +3892,185 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </form>
               </div>
 
-              {/* Backup & Restore */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
+              {/* Backup, Snapshot & Central Sync Hub */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <h3 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                       <Database className="w-4 h-4 text-blue-700" />
-                      <span>SAO LƯU, PHỤC HỒI & ĐỒNG BỘ GITHUB / VERCEL</span>
+                      <span>HỆ THỐNG ĐỒNG BỘ TRUNG TÂM & QUẢN LÝ SAO LƯU DỮ LIỆU</span>
                     </h3>
                     <p className="text-xs text-slate-500 mt-1">
-                      Dữ liệu được lưu trữ trực tiếp vào bộ nhớ máy tính này, không bị mất khi đóng trình duyệt. Bạn có thể xuất file để đưa lên GitHub cho toàn bộ người dân xem qua Vercel.
+                      Cơ chế đồng bộ một nguồn trung tâm duy nhất: Google AI Studio ↔ GitHub (nhánh main) ↔ Vercel Production. Tự động sao lưu định kỳ 12 giờ/lần và sao lưu trước mọi cập nhật lớn.
                     </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleSyncToServer}
+                    disabled={syncing}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 disabled:bg-blue-400 text-white text-xs font-bold shadow-md shadow-blue-700/20 transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                    <span>{syncing ? 'Đang đồng bộ...' : 'Đồng bộ lên Máy chủ ngay'}</span>
+                  </button>
+                </div>
+
+                {/* Status Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 border border-blue-200 text-blue-700 flex items-center justify-center shrink-0">
+                      <Server className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold text-blue-900">Máy chủ trung tâm</div>
+                      <div className="text-xs font-extrabold text-blue-700 mt-0.5">Trực tuyến (Port 3000)</div>
+                      <div className="text-[10px] text-blue-600 mt-1">Không dùng bộ đệm riêng lẻ</div>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-emerald-50/70 border border-emerald-200 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 border border-emerald-200 text-emerald-700 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold text-emerald-900">Sao lưu an toàn</div>
+                      <div className="text-xs font-extrabold text-emerald-700 mt-0.5">12 giờ / lần & Pre-update</div>
+                      <div className="text-[10px] text-emerald-600 mt-1">Không ghi đè bản cũ</div>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-purple-50/70 border border-purple-200 flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 border border-purple-200 text-purple-700 flex items-center justify-center shrink-0">
+                      <History className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-bold text-purple-900">Bản Snapshot đã lưu</div>
+                      <div className="text-xs font-extrabold text-purple-700 mt-0.5">{snapshots.length} bản sao lưu</div>
+                      <div className="text-[10px] text-purple-600 mt-1">Sẵn sàng khôi phục 1 chạm</div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                {/* Create on-demand Snapshot */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
+                      <HardDrive className="w-4 h-4 text-blue-700" />
+                      <span>TẠO BẢN SAO LƯU SNAPSHOT TỨC THỜI (THEO YÊU CẦU)</span>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-medium">Bảo vệ trước khi nâng cấp lớn</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      placeholder="Ghi chú lý do sao lưu (ví dụ: Trước khi cập nhật danh sách Ban Điều hành)..."
+                      value={snapshotReason}
+                      onChange={(e) => setSnapshotReason(e.target.value)}
+                      className="flex-1 px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:outline-blue-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateSnapshot}
+                      disabled={creatingSnapshot}
+                      className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      <Download className={`w-3.5 h-3.5 ${creatingSnapshot ? 'animate-bounce' : ''}`} />
+                      <span>{creatingSnapshot ? 'Đang tạo snapshot...' : 'Tạo bản sao lưu ngay'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Snapshots History Table */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                      <History className="w-4 h-4 text-blue-700" />
+                      <span>DANH SÁCH CÁC BẢN SAO LƯU SNAPSHOT TRÊN HỆ THỐNG</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={loadSnapshots}
+                      className="text-xs text-blue-700 hover:text-blue-800 font-semibold flex items-center gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${loadingSnapshots ? 'animate-spin' : ''}`} />
+                      <span>Làm mới danh sách</span>
+                    </button>
+                  </div>
+
+                  {snapshots.length === 0 ? (
+                    <div className="p-6 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50 text-xs text-slate-500">
+                      Chưa có bản snapshot nào được lưu. Bạn có thể bấm nút &quot;Tạo bản sao lưu ngay&quot; ở trên để tạo bản đầu tiên.
+                    </div>
+                  ) : (
+                    <div className="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+                      <table className="w-full text-left text-xs text-slate-700">
+                        <thead className="bg-slate-100/80 text-[11px] font-bold text-slate-800 border-b border-slate-200 uppercase">
+                          <tr>
+                            <th className="p-3">Tên tệp & Thời điểm</th>
+                            <th className="p-3">Lý do sao lưu</th>
+                            <th className="p-3">Dung lượng</th>
+                            <th className="p-3">Tổng số bản ghi</th>
+                            <th className="p-3 text-right">Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {snapshots.map((item) => (
+                            <tr key={item.filename} className="hover:bg-slate-50/70 transition-colors">
+                              <td className="p-3 font-mono text-[11px]">
+                                <div className="font-bold text-slate-900">{item.filename}</div>
+                                <div className="text-[10px] text-slate-500 mt-0.5">{formatVietnameseDate(item.timestamp)}</div>
+                              </td>
+                              <td className="p-3">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  item.reason.includes('truoc-khi') || item.reason.includes('an-toan')
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : item.reason.includes('dinh-ky')
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}>
+                                  {item.reason}
+                                </span>
+                              </td>
+                              <td className="p-3 font-mono text-[11px] text-slate-600">{item.sizeFormatted}</td>
+                              <td className="p-3 text-[11px] text-slate-600">
+                                {item.itemCounts ? (
+                                  <span>
+                                    {item.itemCounts.committeeMembers} cán bộ, {item.itemCounts.officialDocuments} văn bản, {item.itemCounts.activities} hoạt động
+                                  </span>
+                                ) : (
+                                  'Đầy đủ dữ liệu'
+                                )}
+                              </td>
+                              <td className="p-3 text-right whitespace-nowrap">
+                                <div className="inline-flex items-center gap-1.5 justify-end">
+                                  <button
+                                    type="button"
+                                    disabled={restoringFilename === item.filename}
+                                    onClick={() => handleRestoreSnapshot(item.filename)}
+                                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white rounded-lg text-[11px] font-bold transition-all cursor-pointer"
+                                  >
+                                    {restoringFilename === item.filename ? 'Đang phục hồi...' : 'Phục hồi'}
+                                  </button>
+                                  <a
+                                    href={`/api/admin/backups/download/${encodeURIComponent(item.filename)}`}
+                                    download={item.filename}
+                                    className="p-1.5 text-slate-600 hover:text-blue-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                    title="Tải tệp snapshot JSON"
+                                  >
+                                    <Download className="w-3.5 h-3.5" />
+                                  </a>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Import / Export JSON Fallback */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
                   <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 flex flex-col justify-between">
                     <div>
                       <div className="font-bold text-xs text-emerald-900 mb-1 flex items-center gap-1.5">
@@ -3850,7 +4078,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span>Xuất tệp database.json</span>
                       </div>
                       <p className="text-[11px] text-emerald-700">
-                        Tải toàn bộ dữ liệu bạn vừa chỉnh sửa (cán bộ, thông tin, tiện ích, đoàn thể...) về máy dạng file chuẩn.
+                        Tải toàn bộ dữ liệu bạn vừa chỉnh sửa (cán bộ, thông tin, tiện ích, đoàn thể...) về máy dạng file JSON chuẩn.
                       </p>
                     </div>
                     <button
@@ -3861,10 +4089,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = 'database.json';
+                        a.download = `database-kp2-${new Date().toISOString().split('T')[0]}.json`;
                         a.click();
                         URL.revokeObjectURL(url);
-                        alert('Đã xuất file database.json thành công về máy tính của bạn!');
+                        showNotification('✅ Đã xuất file database.json thành công về máy tính của bạn!');
                       }}
                       className="mt-3 inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                     >
@@ -3880,7 +4108,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span>Phục hồi / Nạp tệp database.json</span>
                       </div>
                       <p className="text-[11px] text-blue-700">
-                        Nạp dữ liệu từ một file JSON đã lưu trữ trước đó vào hệ thống trên máy này.
+                        Nạp dữ liệu từ một file JSON đã lưu trữ trước đó vào hệ thống, tự động tạo snapshot dự phòng.
                       </p>
                     </div>
                     <label className="mt-3 inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer">
@@ -3894,19 +4122,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           const file = e.target.files?.[0];
                           if (!file) return;
                           const reader = new FileReader();
-                          reader.onload = (event) => {
+                          reader.onload = async (event) => {
                             try {
                               const content = event.target?.result as string;
                               const parsed = JSON.parse(content);
-                              if (parsed && parsed.communityInfo) {
-                                saveLocalDatabase(parsed);
-                                alert('Đã nạp dữ liệu thành công! Trang web sẽ tự động làm mới để hiển thị.');
-                                window.location.reload();
+                              const targetDb = parsed.database ? parsed.database : parsed;
+                              if (targetDb && targetDb.communityInfo && targetDb.demographics) {
+                                saveLocalDatabase(targetDb);
+                                try {
+                                  await syncDatabaseToServer(targetDb);
+                                } catch {}
+                                showNotification('✅ Đã nạp dữ liệu và đồng bộ máy chủ thành công!');
+                                setTimeout(() => window.location.reload(), 1200);
                               } else {
-                                alert('Tệp JSON không đúng cấu trúc dữ liệu của Khu phố 02.');
+                                showNotification('Tệp JSON không đúng cấu trúc dữ liệu của Khu phố 02', true);
                               }
                             } catch {
-                              alert('Lỗi đọc tệp JSON. Vui lòng kiểm tra lại định dạng file.');
+                              showNotification('Lỗi đọc tệp JSON. Vui lòng kiểm tra lại định dạng file', true);
                             }
                           };
                           reader.readAsText(file);
@@ -3916,16 +4148,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                 </div>
 
-                {/* GitHub & Vercel Sync Instructions */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2">
-                  <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                    <span>💡 Hướng dẫn đưa dữ liệu mới nhất lên GitHub và Vercel:</span>
+                {/* Architecture & Deployment Guide */}
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs text-slate-700 space-y-2.5">
+                  <div className="font-bold text-slate-900 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>QUY TRÌNH VẬN HÀNH ĐỒNG BỘ 3 ĐẦU NỐI (AI STUDIO ↔ GITHUB ↔ VERCEL):</span>
                   </div>
-                  <ol className="list-decimal list-inside space-y-1 text-[11px] text-slate-600">
-                    <li>Sau khi bạn dùng Trang Điều Hành chỉnh sửa xong, bấm nút <strong>"Tải về file database.json"</strong> ở trên.</li>
-                    <li>Chép file <code>database.json</code> vừa tải về đè vào 2 vị trí: <code>data/database.json</code> và <code>public/data/database.json</code> trong thư mục mã nguồn.</li>
-                    <li>Đẩy (push) mã nguồn lên GitHub. Vercel sẽ tự động cập nhật và bất kỳ ai vào link Vercel cũng thấy trang chủ mới nhất!</li>
-                  </ol>
+                  <ul className="space-y-1.5 text-[11px] text-slate-600 leading-relaxed">
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-blue-700 shrink-0">1. Kho mã nguồn trung tâm:</span>
+                      <span>Mã nguồn được quản trị trên 1 kho GitHub duy nhất tại nhánh chính <code>main</code>. Mọi cập nhật từ Google AI Studio được kết nối đồng bộ trực tiếp.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-blue-700 shrink-0">2. Triển khai tự động Vercel:</span>
+                      <span>Vercel được cấu hình định tuyến API Serverless (<code>/api/*</code> qua <code>api/index.ts</code>) và giao diện trang chủ cố định. Bất kỳ ai vào đường link Production đều tự động thấy nội dung mới nhất.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="font-bold text-blue-700 shrink-0">3. Bảo toàn & Khôi phục dữ liệu:</span>
+                      <span>Mỗi lần thực hiện đồng bộ hay cập nhật, hệ thống tự động ghi một bản snapshot an toàn vào thư mục sao lưu. Bản sao lưu cũ không bị ghi đè, bảo đảm tính toàn vẹn 100%.</span>
+                    </li>
+                  </ul>
                 </div>
               </div>
             </div>

@@ -814,7 +814,7 @@ app.delete('/api/admin/announcements/:id', verifyAuthMiddleware, (req: Request, 
   }
 });
 
-// 15. Backup and Restore
+// 15. Backup, Snapshot and Disaster Recovery
 app.get('/api/admin/backup', verifyAuthMiddleware, (req: Request, res: Response) => {
   try {
     const result = dbManager.createBackup();
@@ -835,6 +835,70 @@ app.post('/api/admin/restore', verifyAuthMiddleware, (req: Request, res: Respons
     res.json({ success: true, message: result.message });
   } catch (err: any) {
     res.status(500).json({ error: 'Lỗi phục hồi dữ liệu sao lưu' });
+  }
+});
+
+// Danh sách tất cả các bản snapshot sao lưu tự động & thủ công
+app.get('/api/admin/backups', verifyAuthMiddleware, (req: Request, res: Response) => {
+  try {
+    const backups = dbManager.listSnapshots();
+    res.json({ success: true, backups });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Lỗi lấy danh sách bản sao lưu' });
+  }
+});
+
+// Kích hoạt tạo snapshot sao lưu ngay lập tức theo yêu cầu
+app.post('/api/admin/backups/create', verifyAuthMiddleware, (req: Request, res: Response) => {
+  try {
+    const reason = req.body?.reason || 'Thao tác điều hành thủ công';
+    const snapshot = dbManager.createSnapshotBackup(reason);
+    if (!snapshot) {
+      return res.status(500).json({ error: 'Không thể tạo bản snapshot sao lưu' });
+    }
+    res.json({
+      success: true,
+      snapshot,
+      message: `Đã tạo bản snapshot an toàn: ${snapshot.filename}`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Lỗi tạo snapshot' });
+  }
+});
+
+// Phục hồi từ một tệp snapshot cụ thể trên máy chủ
+app.post('/api/admin/backups/restore-file', verifyAuthMiddleware, (req: Request, res: Response) => {
+  try {
+    const { filename } = req.body;
+    if (!filename) {
+      return res.status(400).json({ error: 'Vui lòng cung cấp tên tệp sao lưu cần phục hồi' });
+    }
+    const result = dbManager.restoreSnapshotFile(filename);
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+    res.json({
+      success: true,
+      message: result.message,
+      data: dbManager.getAdminData(),
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Lỗi phục hồi tệp sao lưu' });
+  }
+});
+
+// Tải xuống một bản sao lưu cụ thể
+app.get('/api/admin/backups/download/:filename', verifyAuthMiddleware, (req: Request, res: Response) => {
+  try {
+    const filePath = dbManager.getSnapshotFilePath(req.params.filename);
+    if (!filePath || !fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Không tìm thấy tệp bản sao lưu' });
+    }
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
+    res.sendFile(filePath);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Lỗi tải tệp sao lưu' });
   }
 });
 
@@ -866,6 +930,9 @@ app.post('/api/admin/sync-database', verifyAuthMiddleware, (req: Request, res: R
 
 // ---------------- SERVER INITIALIZATION & VITE MIDDLEWARE ----------------
 
+export { app };
+export default app;
+
 async function startServer() {
   if (!IS_PROD) {
     const { createServer: createViteServer } = await import('vite');
@@ -889,7 +956,11 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error('Lỗi khởi động máy chủ:', err);
-  process.exit(1);
-});
+// Khi chạy trên môi trường Vercel Serverless, Vercel tự quản lý vòng đời HTTP request qua handler export
+if (!process.env.VERCEL) {
+  startServer().catch((err) => {
+    console.error('Lỗi khởi động máy chủ:', err);
+    process.exit(1);
+  });
+}
+
