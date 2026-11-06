@@ -68,6 +68,7 @@ import {
   changeAdminPassword,
   getLocalDatabase,
   saveLocalDatabase,
+  syncDatabaseToServer,
 } from '../services/api';
 import {
   CommitteeMember,
@@ -132,6 +133,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [hasUnsyncedLocalData, setHasUnsyncedLocalData] = useState(false);
 
   // Quick Utility Resource Management (Standalone DocumentUploader Tab)
   const [quickManageResources, setQuickManageResources] = useState<UtilityResourceForm>({
@@ -156,7 +159,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setTimeout(() => {
       setSuccessMsg(null);
       setErrorMsg(null);
-    }, 4000);
+    }, 4500);
+  };
+
+  // Kiểm tra nếu trên trình duyệt hiện tại có dữ liệu mà máy chủ chưa có
+  React.useEffect(() => {
+    try {
+      const localDb = getLocalDatabase();
+      const localItemsCount = (localDb.committeeMembers?.length || 0) +
+        (localDb.officialDocuments?.length || 0) +
+        (localDb.activities?.length || 0) +
+        (localDb.announcements?.length || 0);
+      const serverItemsCount = (adminData.committeeMembers?.length || 0) +
+        (adminData.officialDocuments?.length || 0) +
+        (adminData.activities?.length || 0) +
+        (adminData.announcements?.length || 0);
+
+      const localHasLeader = Boolean(localDb.communityInfo?.leaderName && localDb.communityInfo.leaderName.trim() !== '');
+      const serverHasLeader = Boolean(adminData.communityInfo?.leaderName && adminData.communityInfo.leaderName.trim() !== '');
+
+      if (localItemsCount > serverItemsCount || (localHasLeader && !serverHasLeader)) {
+        setHasUnsyncedLocalData(true);
+      }
+    } catch {}
+  }, [adminData]);
+
+  const handleSyncToServer = async () => {
+    setSyncing(true);
+    try {
+      const localDb = getLocalDatabase();
+      await syncDatabaseToServer(localDb);
+      showNotification('✅ Đã đồng bộ toàn bộ dữ liệu lên máy chủ Khu phố 02 thành công! Mọi tài khoản khác truy cập cùng link đều thấy được ngay.');
+      setHasUnsyncedLocalData(false);
+      onRefresh();
+    } catch (err: any) {
+      showNotification('Lỗi đồng bộ lên máy chủ: ' + (err.message || 'Thất bại'), true);
+    } finally {
+      setSyncing(false);
+    }
   };
 
   // 1. Committee Member Form State
@@ -832,25 +872,62 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-400 hidden sm:inline">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Máy chủ đồng bộ trực tuyến
+          </span>
+
+          <button
+            onClick={handleSyncToServer}
+            disabled={syncing}
+            title="Lưu vĩnh viễn và chia sẻ nội dung đã chỉnh sửa cho tất cả mọi tài khoản và thiết bị"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 text-white text-xs font-bold shadow transition-colors cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{syncing ? 'Đang đồng bộ...' : 'Đồng bộ lên Máy chủ'}</span>
+            <span className="sm:hidden">Đồng bộ</span>
+          </button>
+
+          <span className="text-xs text-slate-400 hidden xl:inline">
             Tài khoản: <strong className="text-white">{adminData.adminStatus.username}</strong>
           </span>
+
           <button
             onClick={onLogout}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-xs font-semibold transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>Đăng xuất</span>
+            <span className="hidden sm:inline">Đăng xuất</span>
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
       </div>
+
+      {/* Unsynced Data Banner */}
+      {hasUnsyncedLocalData && (
+        <div className="bg-amber-500 text-slate-950 px-4 py-2.5 text-xs font-bold flex flex-wrap items-center justify-between gap-2 border-b border-amber-600 shadow-md">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-slate-950 shrink-0" />
+            <span>
+              <strong>Phát hiện dữ liệu chỉnh sửa trên thiết bị này chưa lưu lên máy chủ chung!</strong> Nhấn nút bên cạnh để đồng bộ ngay, giúp mọi tài khoản khác truy cập cùng link đều thấy được.
+            </span>
+          </div>
+          <button
+            onClick={handleSyncToServer}
+            disabled={syncing}
+            className="px-3 py-1.5 bg-slate-950 text-white rounded-lg text-xs font-extrabold hover:bg-black shadow transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+            <span>{syncing ? 'Đang đồng bộ...' : 'ĐỒNG BỘ LÊN MÁY CHỦ NGAY'}</span>
+          </button>
+        </div>
+      )}
 
       {/* Main Body */}
       <div className="flex flex-1 overflow-hidden">

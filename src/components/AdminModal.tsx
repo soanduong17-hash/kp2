@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, User, Key, Eye, EyeOff, AlertCircle, ShieldCheck, X } from 'lucide-react';
-import { loginAdmin, logoutAdmin, fetchAdminData, AdminDataResponse } from '../services/api';
+import {
+  loginAdmin,
+  logoutAdmin,
+  fetchAdminData,
+  AdminDataResponse,
+  syncDatabaseToServer,
+  getLocalDatabase,
+} from '../services/api';
 import { AdminDashboard } from './AdminDashboard';
 
 interface AdminModalProps {
@@ -72,6 +79,24 @@ export const AdminModal: React.FC<AdminModalProps> = ({
       await loginAdmin(username.trim(), password);
       setIsAdminLoggedIn(true);
       setPassword('');
+
+      // Auto-sync existing local modifications to server on login
+      try {
+        const localDb = getLocalDatabase();
+        const hasContentToSync =
+          (localDb.committeeMembers && localDb.committeeMembers.length > 0) ||
+          (localDb.officialDocuments && localDb.officialDocuments.length > 0) ||
+          (localDb.activities && localDb.activities.length > 0) ||
+          (localDb.announcements && localDb.announcements.length > 0) ||
+          Boolean(localDb.communityInfo?.leaderName && localDb.communityInfo.leaderName.trim() !== '');
+
+        if (hasContentToSync) {
+          await syncDatabaseToServer(localDb);
+        }
+      } catch (syncErr) {
+        console.warn('Auto-sync trên đăng nhập:', syncErr);
+      }
+
       await loadAdminData();
       onDataChanged();
     } catch (err: any) {

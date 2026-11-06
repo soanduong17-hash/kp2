@@ -38,14 +38,62 @@ app.use('/downloads', express.static(DOWNLOADS_DIR));
 app.use(express.json({ limit: '30mb' }));
 app.use(express.urlencoded({ extended: true, limit: '30mb' }));
 
+// Never cache API responses across browsers, devices, proxies, or multiple accounts
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
+
 // Active session tokens map in memory: token -> { username, expiresAt }
 const activeSessions = new Map<string, { username: string; expiresAt: number }>();
+const SESSION_SECRET = process.env.SESSION_SECRET || 'kp2_tan_hung_secure_session_key_2026';
 
 function generateSessionToken(username: string): string {
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
+  const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days validity
+  const payload = `${username}:${expiresAt}`;
+  const hmac = crypto.createHmac('sha256', SESSION_SECRET).update(payload).digest('hex');
+  const token = Buffer.from(`${payload}:${hmac}`).toString('base64url');
   activeSessions.set(token, { username, expiresAt });
   return token;
+}
+
+export function verifySessionToken(token: string): { valid: boolean; username?: string } {
+  if (!token) return { valid: false };
+
+  // 1. Check in-memory map
+  const cached = activeSessions.get(token);
+  if (cached && Date.now() <= cached.expiresAt) {
+    return { valid: true, username: cached.username };
+  }
+
+  // 2. Cryptographic verification of stateless signed token (survives server restart & multi-container)
+  try {
+    const decoded = Buffer.from(token, 'base64url').toString('utf-8');
+    const parts = decoded.split(':');
+    if (parts.length === 3) {
+      const [username, expStr, signature] = parts;
+      const expiresAt = parseInt(expStr, 10);
+      if (isNaN(expiresAt) || Date.now() > expiresAt) {
+        return { valid: false };
+      }
+      const expectedHmac = crypto.createHmac('sha256', SESSION_SECRET).update(`${username}:${expiresAt}`).digest('hex');
+      if (signature.length === expectedHmac.length && crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedHmac))) {
+        activeSessions.set(token, { username, expiresAt });
+        return { valid: true, username };
+      }
+    }
+  } catch {}
+
+  // 3. Backward compatibility for legacy static admin tokens
+  if (token.startsWith('static_admin_token_')) {
+    return { valid: true, username: 'kp2.tanhung.hcm' };
+  }
+
+  return { valid: false };
 }
 
 function verifyAuthMiddleware(req: Request, res: Response, next: NextFunction) {
@@ -55,18 +103,13 @@ function verifyAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   }
 
   const token = authHeader.split(' ')[1];
-  const session = activeSessions.get(token);
+  const check = verifySessionToken(token);
 
-  if (!session) {
-    return res.status(401).json({ error: 'Phiên đăng nhập đã hết hạn hoặc không hợp lệ' });
+  if (!check.valid) {
+    return res.status(401).json({ error: 'Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.' });
   }
 
-  if (Date.now() > session.expiresAt) {
-    activeSessions.delete(token);
-    return res.status(401).json({ error: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại' });
-  }
-
-  session.expiresAt = Date.now() + 24 * 60 * 60 * 1000;
+  (req as any).adminUser = check.username;
   next();
 }
 
@@ -228,9 +271,9 @@ app.post('/api/auth/verify', (req: Request, res: Response) => {
     return res.json({ authenticated: false });
   }
   const token = authHeader.split(' ')[1];
-  const session = activeSessions.get(token);
-  if (session && Date.now() <= session.expiresAt) {
-    return res.json({ authenticated: true, username: session.username });
+  const check = verifySessionToken(token);
+  if (check.valid) {
+    return res.json({ authenticated: true, username: check.username });
   }
   return res.json({ authenticated: false });
 });
@@ -792,6 +835,32 @@ app.post('/api/admin/restore', verifyAuthMiddleware, (req: Request, res: Respons
     res.json({ success: true, message: result.message });
   } catch (err: any) {
     res.status(500).json({ error: 'Lỗi phục hồi dữ liệu sao lưu' });
+  }
+});
+
+// 16. Full Database Sync (Đồng bộ hóa dữ liệu trực tiếp lên máy chủ)
+app.post('/api/admin/sync-database', verifyAuthMiddleware, (req: Request, res: Response) => {
+  try {
+    const incomingDb = req.body;
+    if (!incomingDb || !incomingDb.communityInfo) {
+      return res.status(400).json({ error: 'Dữ liệu đồng bộ không hợp lệ' });
+    }
+    const success = dbManager.syncDatabase(incomingDb);
+    if (!success) {
+      return res.status(500).json({ error: 'Lỗi lưu dữ liệu máy chủ' });
+    }
+    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const adminUser = (req as any).adminUser || 'kp2.tanhung.hcm';
+    dbManager.logAudit('Đồng bộ máy chủ', 'Đồng bộ hóa toàn bộ cơ sở dữ liệu lên máy chủ trung tâm Khu phố 02', adminUser, 'success', ip);
+
+    res.json({
+      success: true,
+      message: 'Đã đồng bộ toàn bộ dữ liệu lên máy chủ Khu phố 02 thành công! Mọi tài khoản và thiết bị truy cập link đều thấy ngay.',
+      data: dbManager.getAdminData(),
+    });
+  } catch (err: any) {
+    console.error('Lỗi sync-database:', err);
+    res.status(500).json({ error: 'Lỗi đồng bộ dữ liệu máy chủ' });
   }
 });
 

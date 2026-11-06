@@ -99,10 +99,10 @@ function AppContent() {
       setIsAdminOpen(true);
     }
 
-    // Auto-polling for real-time updates every 30 seconds
+    // Auto-polling for real-time updates every 15 seconds across all accounts and devices
     const interval = setInterval(() => {
       loadData(true);
-    }, 30000);
+    }, 15000);
 
     return () => clearInterval(interval);
   }, []);

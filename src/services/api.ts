@@ -215,11 +215,17 @@ export async function uploadFileApi(
   };
 }
 
-// 2. Fetch Public Data (4-tier resilient waterfall: never throws an unhandled error screen)
+// 2. Fetch Public Data (Direct server fetch with cache-busting for real-time multi-account sync)
 export async function fetchPublicData(): Promise<PublicDataResponse> {
   // Tier 1: Live server API (Node.js Express backend)
   try {
-    const res = await fetch('/api/public-data');
+    const res = await fetch(`/api/public-data?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+      },
+    });
     const contentType = res.headers.get('content-type') || '';
     if (res.ok && contentType.includes('application/json')) {
       const json = await res.json();
@@ -230,11 +236,11 @@ export async function fetchPublicData(): Promise<PublicDataResponse> {
         return json.data;
       }
     }
-  } catch {
-    // server API unreachable
+  } catch (err) {
+    console.warn('Không thể kết nối máy chủ /api/public-data:', err);
   }
 
-  // Tier 2: Local storage edited database on this device
+  // Tier 2: Local storage edited database on this device (offline cache fallback)
   try {
     const localDb = getLocalDatabase();
     if (localDb && localDb.communityInfo) {
@@ -246,9 +252,9 @@ export async function fetchPublicData(): Promise<PublicDataResponse> {
     }
   } catch {}
 
-  // Tier 3: Static /data/database.json asset (accessible on Vercel & GitHub Pages)
+  // Tier 3: Static /data/database.json asset
   try {
-    const staticRes = await fetch('/data/database.json');
+    const staticRes = await fetch(`/data/database.json?_t=${Date.now()}`, { cache: 'no-store' });
     const contentType = staticRes.headers.get('content-type') || '';
     if (staticRes.ok && (contentType.includes('application/json') || !contentType.includes('html'))) {
       const staticDb = await staticRes.json();
@@ -371,10 +377,36 @@ export async function changeAdminPassword(currentPassword: string, newPassword: 
   saveLocalDatabase(localDb);
 }
 
+// Đồng bộ hóa toàn bộ cơ sở dữ liệu lên máy chủ Node.js trung tâm
+export async function syncDatabaseToServer(dbToSync?: AppDatabase): Promise<{ success: boolean; message: string; data?: any }> {
+  const db = dbToSync || getLocalDatabase();
+  try {
+    const res = await fetch('/api/admin/sync-database', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(db),
+    });
+    const contentType = res.headers.get('content-type') || '';
+    if (res.ok && contentType.includes('application/json')) {
+      const data = await res.json();
+      if (data && data.success) {
+        saveLocalDatabase(db);
+        return data;
+      }
+    }
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Lỗi máy chủ (${res.status})`);
+  } catch (err: any) {
+    console.error('Lỗi syncDatabaseToServer:', err);
+    throw err;
+  }
+}
+
 export async function fetchAdminData(): Promise<AdminDataResponse> {
   try {
-    const res = await fetch('/api/admin/data', {
+    const res = await fetch(`/api/admin/data?_t=${Date.now()}`, {
       headers: getAuthHeaders(),
+      cache: 'no-store',
     });
     const contentType = res.headers.get('content-type') || '';
     if (res.ok && contentType.includes('application/json')) {
@@ -383,7 +415,9 @@ export async function fetchAdminData(): Promise<AdminDataResponse> {
         return json.data;
       }
     }
-  } catch {}
+  } catch (err) {
+    console.warn('Lỗi kết nối /api/admin/data:', err);
+  }
 
   // Fallback to local database
   const db = getLocalDatabase();

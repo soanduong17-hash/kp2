@@ -11,33 +11,234 @@
     "hotline": "028 3775 1234",
     "policePhone": "028 3771 5678 (Công an Phường Tân Hưng)",
     "healthClinicPhone": "028 3771 2468 (Trạm Y tế Phường Tân Hưng)",
-    "leaderName": "",
-    "leaderPhone": "",
-    "deputyName": "",
-    "deputyPhone": "",
+    "leaderName": "Nguyễn Văn Hùng",
+    "leaderPhone": "0903 123 456",
+    "deputyName": "Trần Thị Mai",
+    "deputyPhone": "0918 234 567",
     "email": "khupho02.phuongtanhung@tphcm.gov.vn",
     "workingHours": "Giờ tiếp dân: 07:30 - 17:00 (Thứ Hai – Thứ Bảy)",
-    "updatedAt": "2026-11-06T12:00:00.000Z"
+    "updatedAt": "2026-11-06T15:35:53.945Z"
   },
   "demographics": {
-    "totalResidents": 0,
-    "totalHouseholds": 0,
-    "totalNeighborhoodGroups": 0,
-    "vneidLevel2Rate": 0,
-    "onlinePublicServiceRate": 0,
-    "cashlessPaymentRate": 0,
-    "culturalFamiliesRate": 0,
-    "elderlyCount": 0,
-    "childrenCount": 0,
-    "updatedAt": "2026-11-06T12:00:00.000Z"
+    "totalResidents": 1850,
+    "totalHouseholds": 420,
+    "totalNeighborhoodGroups": 12,
+    "vneidLevel2Rate": 98,
+    "onlinePublicServiceRate": 85,
+    "cashlessPaymentRate": 92,
+    "culturalFamiliesRate": 96,
+    "elderlyCount": 215,
+    "childrenCount": 380,
+    "updatedAt": "2026-11-06T15:35:53.945Z"
   },
-  "committeeMembers": [],
-  "officialDocuments": [],
+  "committeeMembers": [
+    {
+      "id": "mem-1",
+      "fullName": "Nguyễn Văn Hùng",
+      "birthDate": "15/08/1968",
+      "position": "Trưởng Ban Điều hành Khu phố 02",
+      "phoneNumber": "0903 123 456",
+      "responsibility": "Chỉ đạo và điều hành toàn diện công tác dân cư, chuyển đổi số cộng đồng và an sinh xã hội",
+      "receivingHours": "07:30 - 11:30 & 13:30 - 17:00 (Thứ Hai – Thứ Bảy)",
+      "displayOrder": 1,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "mem-2",
+      "fullName": "Trần Thị Mai",
+      "birthDate": "22/04/1975",
+      "position": "Phó Trưởng Ban Điều hành Khu phố 02",
+      "phoneNumber": "0918 234 567",
+      "responsibility": "Phụ trách công tác hành chính, tiếp nhận ý kiến dân sinh và văn hóa gia đình",
+      "receivingHours": "07:30 - 11:30 & 13:30 - 17:00 (Thứ Hai – Thứ Sáu)",
+      "displayOrder": 2,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "mem-3",
+      "fullName": "Đại úy Lê Hoàng Nam",
+      "birthDate": "10/12/1986",
+      "position": "Cảnh sát Khu vực Phụ trách KP2",
+      "phoneNumber": "0982 345 678",
+      "responsibility": "Phụ trách an ninh trật tự, quản lý cư trú, hướng dẫn kích hoạt tài khoản VNeID",
+      "receivingHours": "Trực ban Công an Phường & Lưu động tại địa bàn 24/7",
+      "displayOrder": 3,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "mem-4",
+      "fullName": "Đặng Văn Thành",
+      "birthDate": "05/09/1962",
+      "position": "Trưởng ban Công tác Mặt trận KP2",
+      "phoneNumber": "0902 456 789",
+      "responsibility": "Khối đại đoàn kết toàn dân, giám sát cộng đồng và các phong trào thi đua yêu nước",
+      "receivingHours": "08:00 - 11:30 (Thứ Ba, Thứ Năm, Thứ Bảy)",
+      "displayOrder": 4,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "mem-5",
+      "fullName": "Phạm Thu Hương",
+      "birthDate": "18/06/1979",
+      "position": "Chi hội trưởng Hội Phụ nữ KP2",
+      "phoneNumber": "0908 345 678",
+      "responsibility": "Phong trào phụ nữ, hỗ trợ vốn vay chính sách và xây dựng gia đình hạnh phúc",
+      "receivingHours": "08:00 - 11:30 (Thứ Hai, Thứ Tư, Thứ Sáu)",
+      "displayOrder": 5,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "mem-6",
+      "fullName": "Nguyễn Hoàng Long",
+      "birthDate": "02/11/1998",
+      "position": "Bí thư Chi đoàn Thanh niên KP2",
+      "phoneNumber": "0934 567 890",
+      "responsibility": "Tổ công nghệ số cộng đồng, tập hợp thanh thiếu nhi và phong trào tình nguyện",
+      "receivingHours": "14:00 - 17:30 (Thứ Bảy, Chủ Nhật)",
+      "displayOrder": 6,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "mem-7",
+      "fullName": "Vũ Đình Cường",
+      "birthDate": "12/03/1954",
+      "position": "Chi hội trưởng Hội Người cao tuổi KP2",
+      "phoneNumber": "0913 567 890",
+      "responsibility": "Chăm sóc và phát huy vai trò người cao tuổi, câu lạc bộ dưỡng sinh, mừng thọ",
+      "receivingHours": "08:00 - 11:00 (Thứ Hai, Thứ Năm)",
+      "displayOrder": 7,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "mem-8",
+      "fullName": "Hoàng Văn Đức",
+      "birthDate": "25/07/1958",
+      "position": "Chi hội trưởng Hội Cựu chiến binh KP2",
+      "phoneNumber": "0909 678 901",
+      "responsibility": "Giữ gìn truyền thống Bộ đội Cụ Hồ, giáo dục truyền thống yêu nước cho thế hệ trẻ",
+      "receivingHours": "08:30 - 11:30 (Thứ Tư, Thứ Sáu)",
+      "displayOrder": 8,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    }
+  ],
+  "officialDocuments": [
+    {
+      "id": "doc-1",
+      "documentNumber": "45/KH-UBND",
+      "title": "Kế hoạch triển khai dịch vụ công trực tuyến và thanh toán không tiền mặt trên địa bàn Phường Tân Hưng năm 2026",
+      "issuingAuthority": "UBND Phường Tân Hưng",
+      "issueDate": "2026-01-15",
+      "expirationDate": "2026-12-31",
+      "fileUrl": "/uploads/ke-hoach-dich-vu-cong-2026.pdf",
+      "fileName": "Ke-hoach-45-KH-UBND-Dich-vu-cong-2026.pdf",
+      "fileSize": "1.2 MB",
+      "summary": "Kế hoạch cụ thể hóa chỉ tiêu 100% thủ tục hành chính đủ điều kiện được tiếp nhận trực tuyến; xây dựng tuyến đường số hóa và chợ không dùng tiền mặt.",
+      "isExpired": false,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "doc-2",
+      "documentNumber": "18/QĐ-UBND",
+      "title": "Quyết định kiện toàn nhân sự Ban Điều hành Khu phố 02, Phường Tân Hưng",
+      "issuingAuthority": "UBND Phường Tân Hưng",
+      "issueDate": "2025-11-20",
+      "expirationDate": "2029-11-20",
+      "fileUrl": "/uploads/quyet-dinh-kien-toan-ban-dieu-hanh-kp2.pdf",
+      "fileName": "Quyet-dinh-18-QD-UBND-Kien-toan-KP2.pdf",
+      "fileSize": "850 KB",
+      "summary": "Công nhận kết quả bầu cử Trưởng Khu phố, Phó Trưởng Khu phố và phê chuẩn danh sách Ban Điều hành Khu phố 02 nhiệm kỳ 2024 - 2029.",
+      "isExpired": false,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "doc-3",
+      "documentNumber": "102/TB-CAQ7",
+      "title": "Thông báo hướng dẫn đăng ký tạm trú, thông báo lưu trú qua Cổng Dịch vụ công VNeID",
+      "issuingAuthority": "Công an Phường Tân Hưng",
+      "issueDate": "2026-02-10",
+      "expirationDate": "2027-02-10",
+      "fileUrl": "/uploads/huong-dan-dang-ky-tam-tru-vneid.pdf",
+      "fileName": "Thong-bao-102-TB-CAQ7-Dang-ky-cu-tru.pdf",
+      "fileSize": "640 KB",
+      "summary": "Hướng dẫn các chủ nhà trọ, cơ sở lưu trú và công dân thực hiện khai báo tạm trú trực tuyến 100% trên ứng dụng VNeID thay cho nộp hồ sơ giấy.",
+      "isExpired": false,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    }
+  ],
   "programRegistrations": [],
   "organizationRegistrations": [],
   "incidentReports": [],
   "communityQuestions": [],
-  "activities": [],
+  "activities": [
+    {
+      "id": "act-1",
+      "title": "Ngày hội Chuyển đổi số & Hướng dẫn Dịch vụ công trực tuyến Khu phố 02",
+      "category": "community",
+      "categoryLabel": "Chuyển đổi số",
+      "time": "08:00 - 11:30, Thứ Bảy tuần này",
+      "dateTimestamp": 1794152081525,
+      "location": "Văn phòng Ban Điều hành Khu phố 02 (465/1/2 Trần Xuân Soạn)",
+      "organizer": "Ban Điều hành & Chi đoàn Thanh niên Khu phố 02",
+      "summary": "Tập huấn kỹ năng nộp hồ sơ dịch vụ công trực tuyến, thanh toán hóa đơn điện nước qua ứng dụng số và bảo vệ an toàn thông tin trên không gian mạng.",
+      "content": "Chương trình Ngày hội Chuyển đổi số với nhiều hoạt động thiết thực: Hướng dẫn nộp hồ sơ trực tuyến cấp phường, kích hoạt tài khoản VNeID mức 2, tra cứu thẻ BHYT trên ứng dụng VssID, đăng ký định mức nước sinh hoạt online.",
+      "imageUrl": "https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=1200&q=80",
+      "status": "upcoming",
+      "statusLabel": "Sắp diễn ra",
+      "featured": true,
+      "registrationCount": 42,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "act-2",
+      "title": "Phong trào \"Chủ nhật Xanh\": Phân loại rác thải tại nguồn và xóa điểm đen vệ sinh",
+      "category": "campaign",
+      "categoryLabel": "Môi trường & Đô thị",
+      "time": "07:00 - 09:30, Chủ Nhật",
+      "dateTimestamp": 1794238481525,
+      "location": "Toàn bộ các tuyến hẻm nội bộ Khu phố 02, Phường Tân Hưng",
+      "organizer": "Ban Công tác Mặt trận & Hội Phụ nữ Khu phố 02",
+      "summary": "Toàn dân ra quân dọn dẹp vệ sinh môi trường, phát quang bụi rậm, khơi thông cống rãnh phòng chống dịch sốt xuất huyết và làm đẹp cảnh quan.",
+      "content": "Kêu gọi toàn thể cán bộ, đảng viên, hội viên và nhân dân hưởng ứng phong trào Chủ nhật Xanh, thực hiện nghiêm việc phân loại rác hữu cơ và rác tái chế, không xả rác bừa bãi ra kênh rạch và đường phố.",
+      "imageUrl": "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80",
+      "status": "upcoming",
+      "statusLabel": "Sắp diễn ra",
+      "featured": true,
+      "registrationCount": 68,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    },
+    {
+      "id": "act-3",
+      "title": "Chương trình chăm lo an sinh xã hội: Trao học bổng Khuyến học & Quà gia đình chính sách",
+      "category": "community",
+      "categoryLabel": "An sinh xã hội",
+      "time": "14:30 - 17:00, Ngày 15 hàng tháng",
+      "dateTimestamp": 1794756881525,
+      "location": "Hội trường UBND Phường Tân Hưng",
+      "organizer": "Chi hội Khuyến học & Hội Cựu chiến binh KP2",
+      "summary": "Trao tặng 25 suất học bổng cho học sinh hiếu học có hoàn cảnh khó khăn và 30 phần quà nghĩa tình cho các hộ gia đình chính sách trên địa bàn.",
+      "content": "Phát huy tinh thần tương thân tương ái, Chi hội Khuyến học phối hợp cùng các nhà hảo tâm trao tặng học bổng tiếp sức đến trường cho các cháu học sinh vượt khó học giỏi, động viên tinh thần vươn lên trong học tập.",
+      "imageUrl": "https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=1200&q=80",
+      "status": "upcoming",
+      "statusLabel": "Sắp diễn ra",
+      "featured": false,
+      "registrationCount": 35,
+      "createdAt": "2026-11-06T15:34:41.525Z",
+      "updatedAt": "2026-11-06T15:34:41.525Z"
+    }
+  ],
   "digitalUtilities": [
     {
       "id": "util-vneid",
@@ -385,7 +586,38 @@
       "updatedAt": "2026-11-06T12:00:00.000Z"
     }
   ],
-  "announcements": [],
+  "announcements": [
+    {
+      "id": "ann-1",
+      "title": "Lịch tổng vệ sinh môi trường Ngày Chủ Nhật Xanh và thu gom rác thải cồng kềnh",
+      "category": "urgent",
+      "categoryLabel": "Thông báo khẩn",
+      "publishedAt": "2026-11-06T15:34:41.525Z",
+      "isUrgent": true,
+      "summary": "Ban Điều hành Khu phố 02 phối hợp cùng Công ty Dịch vụ Công ích tổ chức thu gom rác thải cồng kềnh và tổng vệ sinh các tuyến hẻm vào sáng Chủ nhật tuần này.",
+      "content": "Kính gửi toàn thể nhân dân Khu phố 02: Thực hiện phong trào xây dựng khu phố văn minh sạch đẹp, Ban Điều hành Khu phố phối hợp cùng UBND Phường Tân Hưng tổ chức Ngày Chủ Nhật Xanh. Đề nghị các hộ gia đình chủ động đưa vật dụng cồng kềnh (bàn, ghế, nệm cũ...) ra đầu các tuyến hẻm trước 07:30 sáng Chủ nhật để xe chuyên dụng vận chuyển tập kết."
+    },
+    {
+      "id": "ann-2",
+      "title": "Điểm hướng dẫn cài đặt & kích hoạt Định danh điện tử VNeID mức 2 tại Văn phòng Khu phố",
+      "category": "regular",
+      "categoryLabel": "Thông báo thường lệ",
+      "publishedAt": "2026-11-06T15:34:41.525Z",
+      "isUrgent": false,
+      "summary": "Tổ Công nghệ số cộng đồng và Cảnh sát Khu vực hỗ trợ người dân kích hoạt tài khoản định danh điện tử VNeID mức 2 và tích hợp thẻ BHYT, GPLX.",
+      "content": "Nhằm hoàn thành mục tiêu 100% công dân đủ điều kiện có tài khoản VNeID mức 2, Tổ Công nghệ số cộng đồng trực tiếp hỗ trợ tại Văn phòng Khu phố từ 18:00 đến 21:00 các ngày trong tuần. Bà con vui lòng mang theo CCCD gắn chip và điện thoại thông minh để được phục vụ."
+    },
+    {
+      "id": "ann-3",
+      "title": "Lịch khám sức khỏe định kỳ và tiêm chủng mở rộng tại Trạm Y tế Phường Tân Hưng",
+      "category": "regular",
+      "categoryLabel": "Thông báo y tế",
+      "publishedAt": "2026-11-06T15:34:41.525Z",
+      "isUrgent": false,
+      "summary": "Trạm Y tế Phường Tân Hưng thông báo lịch tiêm chủng định kỳ cho trẻ em dưới 5 tuổi và khám sức khỏe cho người cao tuổi trong tháng.",
+      "content": "Kính mời các gia đình có trẻ nhỏ và người cao tuổi từ đủ 60 tuổi trở lên đến Trạm Y tế Phường Tân Hưng (địa chỉ trên đường Trần Xuân Soạn) vào sáng Thứ Ba và Thứ Năm hàng tuần để được thăm khám, tư vấn và cấp phát thuốc bảo hiểm y tế theo quy định."
+    }
+  ],
   "residentDocuments": [],
   "adminConfig": {
     "username": "kp2.tanhung.hcm",
@@ -393,7 +625,7 @@
     "passwordSalt": "kp2_tan_hung_secure_salt_2025",
     "failedAttempts": 0,
     "lockedUntil": 0,
-    "lastLogin": "2026-11-06T13:03:01.443Z"
+    "lastLogin": "2026-11-06T15:35:24.258Z"
   },
   "auditLogs": [
     {
@@ -419,6 +651,33 @@
       "details": "Quản trị viên đăng nhập hệ thống Khu phố 02",
       "operator": "kp2.tanhung.hcm",
       "timestamp": "2026-11-06T13:03:01.444Z",
+      "status": "success",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "id": "log-1793978120336-p6c9",
+      "action": "Đăng nhập thành công",
+      "details": "Quản trị viên đăng nhập hệ thống Khu phố 02",
+      "operator": "kp2.tanhung.hcm",
+      "timestamp": "2026-11-06T15:15:20.336Z",
+      "status": "success",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "id": "log-1793979324260-18pp",
+      "action": "Đăng nhập thành công",
+      "details": "Quản trị viên đăng nhập hệ thống Khu phố 02",
+      "operator": "kp2.tanhung.hcm",
+      "timestamp": "2026-11-06T15:35:24.260Z",
+      "status": "success",
+      "ipAddress": "127.0.0.1"
+    },
+    {
+      "id": "log-1793979353946-l2go",
+      "action": "Đồng bộ máy chủ",
+      "details": "Đồng bộ hóa toàn bộ cơ sở dữ liệu lên máy chủ trung tâm Khu phố 02",
+      "operator": "kp2.tanhung.hcm",
+      "timestamp": "2026-11-06T15:35:53.946Z",
       "status": "success",
       "ipAddress": "127.0.0.1"
     }

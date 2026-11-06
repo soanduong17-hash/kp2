@@ -502,6 +502,36 @@ class DatabaseManager {
     }
   }
 
+  // Đồng bộ toàn bộ dữ liệu từ phía Quản trị viên lên máy chủ
+  public syncDatabase(data: Partial<AppDatabase>): boolean {
+    if (!data || !data.communityInfo) return false;
+    this.db = {
+      ...this.db,
+      communityInfo: {
+        ...this.db.communityInfo,
+        ...data.communityInfo,
+        updatedAt: new Date().toISOString(),
+      },
+      demographics: {
+        ...this.db.demographics,
+        ...(data.demographics || {}),
+        updatedAt: new Date().toISOString(),
+      },
+      committeeMembers: Array.isArray(data.committeeMembers) ? data.committeeMembers : this.db.committeeMembers,
+      officialDocuments: Array.isArray(data.officialDocuments) ? data.officialDocuments : this.db.officialDocuments,
+      activities: Array.isArray(data.activities) ? data.activities : this.db.activities,
+      digitalUtilities: Array.isArray(data.digitalUtilities) ? data.digitalUtilities : this.db.digitalUtilities,
+      organizations: Array.isArray(data.organizations) ? data.organizations : this.db.organizations,
+      announcements: Array.isArray(data.announcements) ? data.announcements : this.db.announcements,
+      residentDocuments: Array.isArray(data.residentDocuments) ? data.residentDocuments : this.db.residentDocuments,
+      communityQuestions: Array.isArray(data.communityQuestions) ? data.communityQuestions : this.db.communityQuestions,
+      incidentReports: Array.isArray(data.incidentReports) ? data.incidentReports : this.db.incidentReports,
+      programRegistrations: Array.isArray(data.programRegistrations) ? data.programRegistrations : this.db.programRegistrations,
+      organizationRegistrations: Array.isArray(data.organizationRegistrations) ? data.organizationRegistrations : this.db.organizationRegistrations,
+    };
+    return this.saveDatabase();
+  }
+
   // Tự động kiểm tra và lọc/xóa văn bản hết hạn
   public cleanupExpiredDocuments(): void {
     if (!Array.isArray(this.db.officialDocuments)) {
